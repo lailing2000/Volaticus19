@@ -9,6 +9,7 @@ try:
     from picamera.array import PiRGBArray
     from picamera import PiCamera
     usingPiCamera = True
+    print("using py camera")
 except:
 	print("not using py camera")
 # https://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/
@@ -208,8 +209,10 @@ def main_loop():
         rawCapture = PiRGBArray(camera, size=(640, 480))
         time.sleep(0.1)
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+            print(frame)
             frame = frame.array
             find_parr_in_frame2(frame)
+            rawCapture.truncate(0)
     else:
         cap = cv2.VideoCapture(0)
         while(True):
