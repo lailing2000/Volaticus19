@@ -231,13 +231,23 @@ def repeat_do_tasks():
             results.append(Results(current_task,apply_recognition(current_task.frame,current_task.box)))
         time.sleep(.1)
 
+def get_input():
+    global programEnd
+    while(not programEnd):
+        x = input()
+        if(x == 'q'):
+            programEnd = True
+
+
 programEnd = False
 tasks = []
 results = []
 def main_loop():
     global programEnd 
-    recThread=threading.Thread(name="generate",target=repeat_do_tasks)
+    recThread=threading.Thread(name="reconition",target=repeat_do_tasks)
     recThread.start()
+    inputThread = threading.Thread(name="get input",target=get_input)
+    inputThread.start()
     if(usingPiCamera):
         camera = PiCamera()
         camera.resolution = (640, 480)
@@ -248,18 +258,17 @@ def main_loop():
             frame = frame.array
             recognize_frame(frame)
             rawCapture.truncate(0)
-            if(keyboard.is_pressed('q')):
-                programEnd = True
+            if(programEnd):
                 break
     else:
         cap = cv2.VideoCapture(0)
         while(True):
             ret, frame = cap.read()
             recognize_frame(frame)
-            if(keyboard.is_pressed('q')):
-                programEnd = True
+            if(programEnd):
                 break
     recThread.join()
+    inputThread.join()
     for result in results:
         print(result.result)
 main_loop()
