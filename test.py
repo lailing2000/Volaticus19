@@ -3,6 +3,8 @@ import numpy as np
 import imutils
 import math
 import pytesseract
+import threading
+import keyboard
 
 usingPiCamera = False
 try:
@@ -93,9 +95,9 @@ def area(v1, v2):
   
 def find_parr_in_frame(frame):
     image = cv2.GaussianBlur(frame,(15,15),0)
-    green = 60;
-    blue = 120;
-    yellow = 30;
+    green = 60
+    blue = 120
+    yellow = 30
     #https://stackoverflow.com/questions/31460267/python-opencv-color-tracking
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
@@ -188,19 +190,21 @@ def apply_recognition(frame, box):
       if not((char >= 48 and char <=57) or (char >=65 and char <=90)):
       	  continue
       print(text)
-def find_parr_in_frame2(frame):
+
+
+def recognize_frame(frame):
     ori_image = frame
     box = find_parr_in_frame(frame)
     if(box is not None):
+        tasks.append((frame,box))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
         apply_recognition(frame, box)
     if(not usingPiCamera):
         #cv2.imshow("Capturing", mask)
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
-    #rawCapture.truncate(0)
 
-
+tasks = []
 def main_loop():
     if(usingPiCamera):
         camera = PiCamera()
@@ -209,14 +213,19 @@ def main_loop():
         rawCapture = PiRGBArray(camera, size=(640, 480))
         time.sleep(0.1)
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-            print(frame)
             frame = frame.array
-            find_parr_in_frame2(frame)
+            recognize_frame(frame)
             rawCapture.truncate(0)
+            if(keyboard.is_pressed('q')):
+                programEnd = True
+                break
     else:
         cap = cv2.VideoCapture(0)
         while(True):
             ret, frame = cap.read()
-            find_parr_in_frame2(frame)
+            recognize_frame(frame)
+            if(keyboard.is_pressed('q')):
+                programEnd = True
+                break
 
 main_loop()
