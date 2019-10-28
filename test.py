@@ -174,38 +174,70 @@ def apply_recognition(frame, box):
     # invert map white to black, red to blue
     inverted_cropped_frame = np.invert(cropped_frame)
     for i in range(0,4):
-      print(i)
-      rotated_inverted_cropped_frame = rotateImage(inverted_cropped_frame,90*i)
-      #text = pytesseract.image_to_string(b, config="-l eng --oem 1 --psm 10")
-      minConf = 70
-      data = pytesseract.image_to_data(rotated_inverted_cropped_frame, config="-l eng --oem 1 --psm 10", output_type=pytesseract.Output.DICT)
-     # print(str(data['conf'][len(data['conf'])-1])+","+str(data['text'][len(data['text'])-1]))
-     # it is still not good at recognising some characters such as C
-      conf = data['conf'][len(data['conf'])-1]
-      text = str(data['text'][len(data['text'])-1])
-      print("result : conf="+str(conf)+", text="+text)
-      if conf=='-1' or conf < minConf or len(text) != 1:
-      	  continue
-      char = ord(text)
-      if not((char >= 48 and char <=57) or (char >=65 and char <=90)):
-      	  continue
-      print(text)
+        print(i)
+        rotated_inverted_cropped_frame = rotateImage(inverted_cropped_frame,90*i)
+        #text = pytesseract.image_to_string(b, config="-l eng --oem 1 --psm 10")
+        minConf = 70
+        data = pytesseract.image_to_data(rotated_inverted_cropped_frame, config="-l eng --oem 1 --psm 10", output_type=pytesseract.Output.DICT)
+        # print(str(data['conf'][len(data['conf'])-1])+","+str(data['text'][len(data['text'])-1]))
+        # it is still not good at recognising some characters such as C
+        conf = data['conf'][len(data['conf'])-1]
+        text = str(data['text'][len(data['text'])-1])
+        print("result : conf="+str(conf)+", text="+text)
+        if conf=='-1' or conf < minConf or len(text) != 1:
+            continue
+        char = ord(text)
+        if not((char >= 48 and char <=57) or (char >=65 and char <=90)):
+            continue
+        print(text)
+        return text
+
+class Tasks:
+    frame = None
+    box = None
+    def __init__(self, frame, box):
+        self.frame = frame
+        self.box = box
+
+class Results:
+    task = None
+    result = None
+
+    def __init__(self, task, result):
+        self.task = task
+        self.result = result
 
 
 def recognize_frame(frame):
     ori_image = frame
     box = find_parr_in_frame(frame)
     if(box is not None):
-        tasks.append((frame,box))
+        tasks.append(Tasks(frame,box))
+        print("new task is added, there are {0} tasks".format(len(tasks)))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
-        apply_recognition(frame, box)
+        # apply_recognition(frame, box)
+    else:
+        print("no task is added, {} tasks in queue".format(len(tasks)))
     if(not usingPiCamera):
         #cv2.imshow("Capturing", mask)
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
 
+def repeat_do_tasks():
+    while(not programEnd):
+        if(len(tasks)>0):
+            print("do new tasks, still have {} tasks left".format(len(tasks)))
+            current_task = tasks.pop(0)
+            results.append(Results(current_task,apply_recognition(current_task.frame,current_task.box)))
+        time.sleep(.1)
+
+programEnd = False
 tasks = []
+results = []
 def main_loop():
+    global programEnd 
+    recThread=threading.Thread(name="generate",target=repeat_do_tasks)
+    recThread.start()
     if(usingPiCamera):
         camera = PiCamera()
         camera.resolution = (640, 480)
@@ -227,5 +259,7 @@ def main_loop():
             if(keyboard.is_pressed('q')):
                 programEnd = True
                 break
-
+    recThread.join()
+    for result in results:
+        print(result.result)
 main_loop()
