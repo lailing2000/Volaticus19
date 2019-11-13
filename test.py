@@ -206,9 +206,9 @@ def apply_recognition(frame, box):
     for i in range(0,4):
         print(i)
         rotated_inverted_cropped_frame = rotateImage(inverted_cropped_frame,90*i)
-        
-        cv2.imshow("recogniting{}".format(i), rotated_inverted_cropped_frame)
-        cv2.waitKey(1)
+        if(not usingPiCamera):
+            cv2.imshow("recogniting{}".format(i), rotated_inverted_cropped_frame)
+            cv2.waitKey(1)
         #text = pytesseract.image_to_string(b, config="-l eng --oem 1 --psm 10")
         minConf = 70
         data = pytesseract.image_to_data(rotated_inverted_cropped_frame, config="-l eng --oem 1 --psm 10", output_type=pytesseract.Output.DICT)
@@ -253,9 +253,6 @@ def recognize_frame(frame):
     else:
         print("no task is added, {} tasks in queue".format(len(tasks)))
     if(not usingPiCamera):
-
-        #cropped_frame = four_point_transform(frame,box)
-        #cv2.imshow("Capturing", cropped_frame)
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
 
