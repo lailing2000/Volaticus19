@@ -101,7 +101,7 @@ def find_parr_in_frame(frame):
     #https://stackoverflow.com/questions/31460267/python-opencv-color-tracking
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    # return largest_parr(hsv,0)
+    # return largest_parr(hsv,0) only red
     cut = 20
     boxes = []
     for c in range(0,cut):
@@ -129,7 +129,7 @@ def largest_parr(hsv, color):
     smax = 255
     vmin = 100
     vmax = 255
-    if(sensitivity > color):
+    if(color - sensitivity < 0):
 	    lower_red_0 = np.array([0, smin, vmin]) 
 	    upper_red_0 = np.array([color + sensitivity, smax, vmax])
 	    lower_red_1 = np.array([180 - sensitivity + color, smin, vmin]) 
@@ -137,7 +137,15 @@ def largest_parr(hsv, color):
 	
 	    mask_0 = cv2.inRange(hsv, lower_red_0 , upper_red_0)
 	    mask_1 = cv2.inRange(hsv, lower_red_1 , upper_red_1 )
+	    mask = cv2.bitwise_or(mask_0, mask_1)
+    elif(color + sensitivity > 180):
+	    lower_red_0 = np.array([color - sensitivity, smin, vmin]) 
+	    upper_red_0 = np.array([180, smax, vmax])
+	    lower_red_1 = np.array([0, smin, vmin]) 
+	    upper_red_1 = np.array([color + sensitivity - 180,smax, vmax])
 	
+	    mask_0 = cv2.inRange(hsv, lower_red_0 , upper_red_0)
+	    mask_1 = cv2.inRange(hsv, lower_red_1 , upper_red_1 )
 	    mask = cv2.bitwise_or(mask_0, mask_1)
     else:
 	    lower_red_0 = np.array([color - sensitivity, smin, vmin]) 
@@ -158,18 +166,13 @@ def largest_parr(hsv, color):
             isSquare = False
             e1 = approx[1] - approx[0]
             e2 = approx[2] - approx[3]
-            
             e3 = approx[3] - approx[0]
             e4 = approx[2] - approx[1]
-            
             r1 = length(e1[0])/length(e2[0])
-            
             r2 = length(e3[0])/length(e4[0])
             if(r1 > 0.9 and r1 < 1.1 and r2 > 0.9 and r2 < 1.1):
             	isSquare = True
-            
             if(isSquare):
-                
                 shortest_side = find_box_size(approx)
                 if(shortest_side>largestSide):
                     largestSide = shortest_side
@@ -203,6 +206,9 @@ def apply_recognition(frame, box):
     for i in range(0,4):
         print(i)
         rotated_inverted_cropped_frame = rotateImage(inverted_cropped_frame,90*i)
+        
+        cv2.imshow("recogniting{}".format(i), rotated_inverted_cropped_frame)
+        cv2.waitKey(1)
         #text = pytesseract.image_to_string(b, config="-l eng --oem 1 --psm 10")
         minConf = 70
         data = pytesseract.image_to_data(rotated_inverted_cropped_frame, config="-l eng --oem 1 --psm 10", output_type=pytesseract.Output.DICT)
@@ -218,6 +224,7 @@ def apply_recognition(frame, box):
             continue
         print(text)
         return text
+    
 
 class Tasks:
     frame = None
@@ -246,7 +253,9 @@ def recognize_frame(frame):
     else:
         print("no task is added, {} tasks in queue".format(len(tasks)))
     if(not usingPiCamera):
-        #cv2.imshow("Capturing", mask)
+
+        #cropped_frame = four_point_transform(frame,box)
+        #cv2.imshow("Capturing", cropped_frame)
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
 
