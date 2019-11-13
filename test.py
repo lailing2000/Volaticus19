@@ -100,10 +100,31 @@ def find_parr_in_frame(frame):
     yellow = 30
     #https://stackoverflow.com/questions/31460267/python-opencv-color-tracking
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    
+
+    # return largest_parr(hsv,0)
+    cut = 20
+    boxes = []
+    for c in range(0,cut):
+        current_color = int(180 / cut * c)
+        current_largest_box = largest_parr(hsv,current_color)
+        if(current_largest_box is not None):
+            boxes.append(current_largest_box)
+    if(len(boxes) > 0):
+        largest_box_size = 0
+        largest_box = None
+        for box in boxes:
+            current_size = find_box_size(box)
+            if(current_size > largest_box_size):
+                largest_box_size = current_size
+                largest_box = box
+        return largest_box
+
+
+
+
+def largest_parr(hsv, color):
+
     sensitivity = 10
-    
-    color = 0
     smin = 100
     smax = 255
     vmin = 100
@@ -122,7 +143,6 @@ def find_parr_in_frame(frame):
 	    lower_red_0 = np.array([color - sensitivity, smin, vmin]) 
 	    upper_red_0 = np.array([color + sensitivity, smax, vmax])
 	    mask = cv2.inRange(hsv, lower_red_0 , upper_red_0)
-        
     cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
 	cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
@@ -150,23 +170,30 @@ def find_parr_in_frame(frame):
             
             if(isSquare):
                 
-                v1 = approx[1] - approx[0]
-                v2 =approx[2] - approx[0]
-                v3 =approx[3] - approx[0]
-                
-                l1 = length(v1[0])
-                l2 = length(v2[0])
-                l3 = length(v3[0])
-                shortest_side = l1
-                if(l2<shortest_side):
-                    shortest_side = l2
-                if(l3<shortest_side):
-                    shortest_side = l3
-                
+                shortest_side = find_box_size(approx)
                 if(shortest_side>largestSide):
                     largestSide = shortest_side
                     box = approx
     return box
+
+def find_box_size(box):
+    
+    v1 = box[1] - box[0]
+    v2 = box[2] - box[0]
+    v3 = box[3] - box[0]
+    
+    l1 = length(v1[0])
+    l2 = length(v2[0])
+    l3 = length(v3[0])
+    shortest_side = l1
+    if(l2<shortest_side):
+        shortest_side = l2
+    if(l3<shortest_side):
+        shortest_side = l3
+
+    return shortest_side
+
+
 
 def apply_recognition(frame, box):
     box = box[:,0]
