@@ -196,7 +196,9 @@ def find_box_size(box):
 
     return shortest_side
 
-
+def isBlur(frame, threashold = 100):
+    print(int(cv2.Laplacian(frame,cv2.CV_64F).var()))
+    return (cv2.Laplacian(frame,cv2.CV_64F).var() < threashold)
 
 def apply_recognition(frame, box):
     box = box[:,0]
@@ -206,12 +208,14 @@ def apply_recognition(frame, box):
     for i in range(0,4):
         print(i)
         rotated_inverted_cropped_frame = rotateImage(inverted_cropped_frame,90*i)
+        isBlur(rotated_inverted_cropped_frame)
         if(not usingPiCamera):
             cv2.imshow("recogniting{}".format(i), rotated_inverted_cropped_frame)
             cv2.waitKey(1)
         #text = pytesseract.image_to_string(b, config="-l eng --oem 1 --psm 10")
         minConf = 70
-        data = pytesseract.image_to_data(rotated_inverted_cropped_frame, config="-l eng --oem 1 --psm 10", output_type=pytesseract.Output.DICT)
+        data = pytesseract.image_to_data(rotated_inverted_cropped_frame, lang='eng', config="--oem 1 --psm 10 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", output_type=pytesseract.Output.DICT)
+        # data = pytesseract.image_to_data(rotated_inverted_cropped_frame, config="-l eng --oem 1 --psm 10", output_type=pytesseract.Output.DICT)
         # print(str(data['conf'][len(data['conf'])-1])+","+str(data['text'][len(data['text'])-1]))
         # it is still not good at recognising some characters such as C
         conf = data['conf'][len(data['conf'])-1]
@@ -247,11 +251,11 @@ def recognize_frame(frame):
     box = find_parr_in_frame(frame)
     if(box is not None):
         tasks.append(Tasks(frame,box))
-        print("new task is added, there are {0} tasks".format(len(tasks)))
+        #print("new task is added, there are {0} tasks".format(len(tasks)))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
         # apply_recognition(frame, box)
-    else:
-        print("no task is added, {} tasks in queue".format(len(tasks)))
+    # else:
+        #print("no task is added, {} tasks in queue".format(len(tasks)))
     if(not usingPiCamera):
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
@@ -259,8 +263,8 @@ def recognize_frame(frame):
 def repeat_do_tasks():
     while(not programEnd):
         if(len(tasks)>0):
-            print("do new tasks, still have {} tasks left".format(len(tasks)))
-            current_task = tasks.pop(0)
+            #print("do new tasks, still have {} tasks left".format(len(tasks)))
+            current_task = tasks.pop()
             results.append(Results(current_task,apply_recognition(current_task.frame,current_task.box)))
         time.sleep(.1)
 
