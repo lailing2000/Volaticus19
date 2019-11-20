@@ -251,7 +251,7 @@ def recognize_frame(frame):
     box = find_parr_in_frame(frame)
     if(box is not None):
         tasks.append(Tasks(frame,box))
-        #print("new task is added, there are {0} tasks".format(len(tasks)))
+        print("new task is added, there are {0} tasks".format(len(tasks)))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
         # apply_recognition(frame, box)
     # else:
@@ -263,7 +263,7 @@ def recognize_frame(frame):
 def repeat_do_tasks():
     while(not programEnd):
         if(len(tasks)>0):
-            #print("do new tasks, still have {} tasks left".format(len(tasks)))
+            print("do new tasks, still have {} tasks left".format(len(tasks)))
             current_task = tasks.pop()
             results.append(Results(current_task,apply_recognition(current_task.frame,current_task.box)))
         time.sleep(.1)
