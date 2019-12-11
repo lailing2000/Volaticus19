@@ -253,9 +253,9 @@ def recognize_frame(frame):
         tasks.append(Tasks(frame,box))
         print("new task is added, there are {0} tasks".format(len(tasks)))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
-        apply_recognition(frame, box)
-    else:
-        print("no task is added, {} tasks in queue".format(len(tasks)))
+        # apply_recognition(frame, box)
+    # else:
+        #print("no task is added, {} tasks in queue".format(len(tasks)))
     if(not usingPiCamera):
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
@@ -291,7 +291,6 @@ def main_loop():
         camera.framerate = 10
         rawCapture = PiRGBArray(camera, size=(640, 480))
         time.sleep(0.1)
-        print("hi")
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
             frame = frame.array
             recognize_frame(frame)
@@ -309,6 +308,4 @@ def main_loop():
     inputThread.join()
     for result in results:
         print(result.result)
-
-print("start main_loop")
 main_loop()
