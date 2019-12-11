@@ -253,9 +253,8 @@ def recognize_frame(frame):
         tasks.append(Tasks(frame,box))
         print("new task is added, there are {0} tasks".format(len(tasks)))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
-        # apply_recognition(frame, box)
-    # else:
-        #print("no task is added, {} tasks in queue".format(len(tasks)))
+    else:
+        print("no task is added, {} tasks in queue".format(len(tasks)))
     if(not usingPiCamera):
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
