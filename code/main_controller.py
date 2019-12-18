@@ -17,13 +17,19 @@ try:
 except:
 	print("not using py camera")
 
+start_time = time.time()
 
 class Tasks:
     frame = None
     box = None
+    add_time = None
+    add_position = None
     def __init__(self, frame, box):
         self.frame = frame
         self.box = box
+        add_time = time.time()-start_time
+
+
 
 class Results:
     task = None
@@ -47,31 +53,14 @@ def recognize_frame(frame):
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
 
-def repeat_do_tasks():
+def repeat_do_tasks_worker():
     while(not programEnd):
         if(len(tasks)>0):
             print("do new tasks, still have {} tasks left".format(len(tasks)))
             current_task = tasks.pop()
             results.append(Results(current_task,recognition.apply_recognition(current_task.frame,current_task.box, not usingPiCamera)))
         time.sleep(.1)
-
-def get_input():
-    global programEnd
-    while(not programEnd):
-        x = input()
-        if(x == 'q'):
-            programEnd = True
-
-
-programEnd = False
-tasks = []
-results = []
-def main_loop():
-    global programEnd 
-    recThread=threading.Thread(name="reconition",target=repeat_do_tasks)
-    recThread.start()
-    inputThread = threading.Thread(name="get input",target=get_input)
-    inputThread.start()
+def repeat_find_box_worker():
     if(usingPiCamera):
         camera = PiCamera()
         camera.resolution = (640, 480)
@@ -91,9 +80,30 @@ def main_loop():
             recognize_frame(frame)
             if(programEnd):
                 break
+
+def get_input():
+    global programEnd
+    while(not programEnd):
+        x = input()
+        if(x == 'q'):
+            programEnd = True
+
+
+programEnd = False
+tasks = []
+results = []
+def main_loop():
+    global programEnd 
+    fbThread=threading.Thread(name="find box",target=repeat_find_box_worker)
+    fbThread.start()
+    recThread=threading.Thread(name="reconition",target=repeat_do_tasks_worker)
+    recThread.start()
+    inputThread = threading.Thread(name="get input",target=get_input)
+    inputThread.start()
+    fbThread.join()
     recThread.join()
     inputThread.join()
     for result in results:
         print(result.result)
-        
+
 main_loop()
