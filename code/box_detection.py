@@ -16,38 +16,64 @@ def angle(v1, v2):
 def area(v1, v2):
   return length(np.cross(v1, v2))
   
-def find_parr_in_frame(frame):
+def find_square(frame):
     image = cv2.GaussianBlur(frame,(15,15),0)
     #https://stackoverflow.com/questions/31460267/python-opencv-color-tracking
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-    # return largest_parr(hsv,0)# only red
     cut = 20
     boxes = []
+    boxes_size = []
+    colors = []
+    white_cnts = detect_white_squares(hsv)
+    
+    if(len(white_cnts) == 0):
+        return None, None
+
     for c in range(0,cut):
         current_color = int(180 / cut * c)
-        current_largest_box = largest_parr(hsv,current_color)
+        current_largest_box = detect_colored_square(hsv,current_color, white_cnts)
         if(current_largest_box is not None):
             boxes.append(current_largest_box)
+            boxes_size.append(get_box_size(current_largest_box))
+            colors.append(current_color)
     if(len(boxes) > 0):
-        largest_box_size = 0
-        largest_box = None
-        for box in boxes:
-            current_size = find_box_size(box)
-            if(current_size > largest_box_size):
-                largest_box_size = current_size
-                largest_box = box
-        return largest_box
+        largest = np.argmax(boxes_size)
+        return boxes[largest], colors[largest]
+
+    return None, None
+
+def detect_white_squares(hsv):
+    smin = 0
+    smax = 100
+    vmin = 150
+    vmax = 255
+    lower_bound = np.array([0, smin, vmin]) 
+    upper_bound = np.array([180, smax, vmax])
+    mask = cv2.inRange(hsv, lower_bound , upper_bound)
+    cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
+	    cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+    return get_squares(cnts)
 
 
 
+def inside_white_square(cnt, white_squares_cnt):
+    center0 = np.mean(cnt, axis=(0,1))
+    size0 = get_box_size(cnt)
+    for w_square in white_squares_cnt:
+        center = np.mean(w_square, axis=(0,1))
+        if(np.linalg.norm(center0-center)<3 and get_box_size(w_square) > size0):
+            # print("dist:{}".format(np.linalg.norm(center0-center)))
+            # print("white size:{}".format(find_box_size(w_square) ))
+            return True
+    return False
 
-def largest_parr(hsv, color):
-
+def get_cnt(hsv, color):
+    '''return the cnts after applying the color filter to hsv image'''
     sensitivity = 10
-    smin = 100
+    smin = 155
     smax = 255
-    vmin = 100
+    vmin = 155
     vmax = 255
     if(color - sensitivity < 0):
 	    lower_red_0 = np.array([0, smin, vmin]) 
@@ -74,8 +100,16 @@ def largest_parr(hsv, color):
     cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
 	cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
+    return cnts
+
+def detect_colored_square(hsv, color, white_cnts):
+    cnts = get_cnt(hsv, color)
+    return get_largest_square(cnts, white_cnts)
+
+
+def get_squares(cnts):
+    '''filter cnts where they are square'''
     boxes = []
-    box_sizes = []
     for cnt in cnts:
         cnt = cv2.convexHull(cnt)
         peri = cv2.arcLength(cnt,True)
@@ -89,31 +123,50 @@ def largest_parr(hsv, color):
             r2 = length(e3[0])/length(e4[0])
             # comparing ratio of length of opposite side
             # if it is parallelogram, the opposite side should have equal side
-            if(r1 > 0.9 and r1 < 1.1 and r2 > 0.9 and r2 < 1.1):
-                boxes.append(approx)
-                box_sizes.append(find_box_size(approx))
+            if(r1 > 0.8 and r1 < 1.2 and r2 > 0.8 and r2 < 1.2):
+                size = get_box_size(approx)
+                if(size>2250000):
+                    boxes.append(approx)
+    return boxes
+
+def get_largest_square(cnts, white_cnts):
+    '''
+    get the largest square from a list of cnts, 
+        where these squares have to be inside any white squares
+    '''
+    boxes = []
+    box_sizes = []
+    for cnt in cnts:
+        cnt = cv2.convexHull(cnt)
+        peri = cv2.arcLength(cnt,True)
+        approx = cv2.approxPolyDP(cnt,0.1 * peri,True)
+        if(len(approx) == 4):
+            size = get_box_size(approx)
+            if(size > 140625):
+                if(inside_white_square(approx, white_cnts)):
+                    boxes.append(approx)
+                    box_sizes.append(get_box_size(approx))
     if(len(boxes)==0):
         return None
     index = np.argmax(box_sizes)
     largest_size = 10 #shortest side have to be at least 10 width
     if(box_sizes[index]>largest_size):
+        print(box_sizes)
         return boxes[index]
-
     return None
 
-def find_box_size(box):
-    '''
-    return the smallest side
-    '''
-    v1 = box[1] - box[0]
-    v2 = box[2] - box[0]
-    v3 = box[3] - box[0]
-    l1 = length(v1[0])
-    l2 = length(v2[0])
-    l3 = length(v3[0])
-    return np.min([l1,l2,l3])
 
-def isBlur(frame, threashold = 100):
+def get_box_size(box):
+    '''return area*area of the box'''
+    # the reason of area*area is that it consider all sides/areas combination
+    # not using sqrt to increase performance
+    e1 = length((box[1] - box[0])[0])
+    e2 = length((box[2] - box[3])[0])
+    e3 = length((box[3] - box[0])[0])
+    e4 = length((box[2] - box[1])[0])
+    return e1*e2*e3*e4
+
+def is_blur(frame, threashold = 100):
     print(int(cv2.Laplacian(frame,cv2.CV_64F).var()))
     return (cv2.Laplacian(frame,cv2.CV_64F).var() < threashold)
 

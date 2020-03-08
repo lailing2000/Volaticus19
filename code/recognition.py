@@ -74,7 +74,7 @@ def rotateImage(image, angle):
   
   
   
-def apply_recognition(frame, box, show_process=False):
+def recognize(frame, box, print_message=False):
     box = box[:,0]
     cropped_frame = four_point_transform(frame,box)
     # invert map white to black, red to blue
@@ -83,7 +83,7 @@ def apply_recognition(frame, box, show_process=False):
         print(i)
         rotated_inverted_cropped_frame = rotateImage(inverted_cropped_frame,90*i)
         #isBlur(rotated_inverted_cropped_frame)
-        if(show_process):
+        if(print_message):
             cv2.imshow("recogniting{}".format(i), rotated_inverted_cropped_frame)
             cv2.waitKey(1)
         #text = pytesseract.image_to_string(b, config="-l eng --oem 1 --psm 10")

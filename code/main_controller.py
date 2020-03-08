@@ -17,34 +17,32 @@ try:
 except:
 	print("not using py camera")
 
-start_time = time.time()
 
 class Tasks:
-    frame = None
-    box = None
-    add_time = None
-    add_position = None
-    def __init__(self, frame, box):
+    def __init__(self, frame, box, color, camera_position, camera_orientation, flight_time):
         self.frame = frame
         self.box = box
-        add_time = time.time()-start_time
-
-
+        self.color = color
+        self.camera_position = camera_position
+        self.camera_orientation = camera_orientation
 
 class Results:
-    task = None
-    result = None
-
     def __init__(self, task, result):
         self.task = task
         self.result = result
 
 
-def recognize_frame(frame):
+start_time = time.time()
+
+def detect_square(frame):
     ori_image = frame
-    box = box_detection.find_parr_in_frame(frame)
+    box, color = box_detection.find_square(frame)
     if(box is not None):
-        tasks.append(Tasks(frame,box))
+        location = (1,2,3)
+        rotation = (1,2,3)
+        flight_time = start_time - time.time()
+        tasks.append(Tasks(frame, box, color, location, rotation, flight_time))
+        
         print("new task is added, there are {0} tasks".format(len(tasks)))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
     else:
@@ -53,14 +51,14 @@ def recognize_frame(frame):
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
 
-def repeat_do_tasks_worker():
+def read_square():
     while(not programEnd):
         if(len(tasks)>0):
             print("do new tasks, still have {} tasks left".format(len(tasks)))
             current_task = tasks.pop()
-            results.append(Results(current_task,recognition.apply_recognition(current_task.frame,current_task.box, not usingPiCamera)))
+            results.append(Results(current_task,recognition.recognize(current_task.frame,current_task.box, not usingPiCamera)))
         time.sleep(.1)
-def repeat_find_box_worker():
+def detect():
     if(usingPiCamera):
         camera = PiCamera()
         camera.resolution = (640, 480)
@@ -69,7 +67,7 @@ def repeat_find_box_worker():
         time.sleep(0.1)
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
             frame = frame.array
-            recognize_frame(frame)
+            detect_square(frame)
             rawCapture.truncate(0)
             if(programEnd):
                 break
@@ -77,12 +75,13 @@ def repeat_find_box_worker():
         cap = cv2.VideoCapture(0)
         while(True):
             ret, frame = cap.read()
-            recognize_frame(frame)
+            detect_square(frame)
             if(programEnd):
                 break
 
 def get_input():
     global programEnd
+
     while(not programEnd):
         x = input()
         if(x == 'q'):
@@ -92,11 +91,14 @@ def get_input():
 programEnd = False
 tasks = []
 results = []
+
+
 def main_loop():
+    
     global programEnd 
-    fbThread=threading.Thread(name="find box",target=repeat_find_box_worker)
+    fbThread=threading.Thread(name="find box",target=detect)
     fbThread.start()
-    recThread=threading.Thread(name="reconition",target=repeat_do_tasks_worker)
+    recThread=threading.Thread(name="reconition",target=read_square)
     recThread.start()
     inputThread = threading.Thread(name="get input",target=get_input)
     inputThread.start()
