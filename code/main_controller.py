@@ -25,6 +25,11 @@ class Tasks:
         self.color = color
         self.camera_position = camera_position
         self.camera_orientation = camera_orientation
+        self.flight_time = flight_time
+    def __str__(self):
+        return "flight_time:{}, color:{}".format(self.flight_time, self.color)
+    def __repr__(self):
+        return self.__str__
 
 class Results:
     def __init__(self, task, result):
@@ -40,13 +45,12 @@ def detect_square(frame):
     if(box is not None):
         location = (1,2,3)
         rotation = (1,2,3)
-        flight_time = start_time - time.time()
+        flight_time = time.time() - start_time
         tasks.append(Tasks(frame, box, color, location, rotation, flight_time))
         
         print("new task is added, there are {0} tasks".format(len(tasks)))
         cv2.drawContours(ori_image, [box], -1,(0,255,0),2) #[box] or box are ok
-    else:
-        print("no task is added, {} tasks in queue".format(len(tasks)))
+        
     if(not usingPiCamera):
         cv2.imshow("Original", ori_image)
     key = cv2.waitKey(1)
@@ -56,6 +60,7 @@ def read_square():
         if(len(tasks)>0):
             print("do new tasks, still have {} tasks left".format(len(tasks)))
             current_task = tasks.pop()
+            print("task info:{}".format(current_task))
             results.append(Results(current_task,recognition.recognize(current_task.frame,current_task.box, not usingPiCamera)))
         time.sleep(.1)
 def detect():

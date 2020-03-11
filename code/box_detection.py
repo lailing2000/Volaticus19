@@ -39,7 +39,6 @@ def find_square(frame):
     if(len(boxes) > 0):
         largest = np.argmax(boxes_size)
         return boxes[largest], colors[largest]
-
     return None, None
 
 def detect_white_squares(hsv):
@@ -125,7 +124,7 @@ def get_squares(cnts):
             # if it is parallelogram, the opposite side should have equal side
             if(r1 > 0.8 and r1 < 1.2 and r2 > 0.8 and r2 < 1.2):
                 size = get_box_size(approx)
-                if(size>2250000):
+                if(size>140625):
                     boxes.append(approx)
     return boxes
 
@@ -142,7 +141,7 @@ def get_largest_square(cnts, white_cnts):
         approx = cv2.approxPolyDP(cnt,0.1 * peri,True)
         if(len(approx) == 4):
             size = get_box_size(approx)
-            if(size > 140625):
+            if(size > 8789):
                 if(inside_white_square(approx, white_cnts)):
                     boxes.append(approx)
                     box_sizes.append(get_box_size(approx))
